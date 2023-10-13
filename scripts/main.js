@@ -1,81 +1,107 @@
-// Objeto que representa la cuenta personal
-const cuentaPersonal = {
+let cuentaPersonal = {
     montoInicial: 0,
     gastos: [],
     agregarGasto: function (nombre, cantidad) {
-      // Buscar si ya existe un gasto con el mismo nombre
       const gastoExistente = this.gastos.find(gasto => gasto.nombre === nombre);
   
       if (gastoExistente) {
-        // Si existe, actualizar la cantidad
         gastoExistente.cantidad += cantidad;
+        gastoExistente.fecha = obtenerFechaActual();
       } else {
-        // Si no existe, agregar un nuevo gasto
-        this.gastos.push({ nombre, cantidad });
+        this.gastos.push({ nombre, cantidad, fecha: obtenerFechaActual() });
       }
+    },
+    eliminarGasto: function (nombre) {
+      this.gastos = this.gastos.filter(gasto => gasto.nombre !== nombre);
     },
     calcularSaldo: function () {
       const totalGastos = this.gastos.reduce((total, gasto) => total + gasto.cantidad, 0);
       return this.montoInicial - totalGastos;
     },
+    reiniciar: function () {
+      this.montoInicial = 0;
+      this.gastos = [];
+    },
   };
   
-  // Función para establecer el monto inicial
-  function establecerMontoInicial() {
-    cuentaPersonal.montoInicial = parseFloat(prompt("Ingrese el monto inicial de la cuenta:"));
+  function obtenerFechaActual() {
+    const fecha = new Date();
+    const options = { year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' };
+    return fecha.toLocaleDateString('es-ES', options);
+  }
+  
+  function iniciarSimulador() {
+    cuentaPersonal.montoInicial = parseFloat(document.getElementById("montoInicial").value);
   
     if (isNaN(cuentaPersonal.montoInicial)) {
-      console.log("Por favor, ingrese un monto inicial válido.");
-      establecerMontoInicial();
+      alert("Por favor, ingrese un monto inicial válido.");
+    } else {
+      localStorage.setItem("cuentaPersonal", JSON.stringify(cuentaPersonal));
+      mostrarResumen();
     }
   }
   
-  // Función para agregar gastos hasta que no haya más dinero
-  function simularCuenta() {
-    while (true) {
-      let nombreGasto = prompt("Ingrese el nombre del gasto:");
-      let cantidadGasto = parseFloat(prompt("Ingrese la cantidad del gasto:"));
+  function agregarGasto() {
+    const nombreGasto = document.getElementById("nombreGasto").value;
+    const cantidadGasto = parseFloat(document.getElementById("cantidadGasto").value);
   
-      if (isNaN(cantidadGasto)) {
-        console.log("Por favor, ingrese una cantidad válida.");
-        continue;
-      }
-  
+    if (isNaN(cantidadGasto)) {
+      alert("Por favor, ingrese una cantidad válida.");
+    } else {
       cuentaPersonal.agregarGasto(nombreGasto, cantidadGasto);
-      console.log(`Gasto de ${cantidadGasto} registrado para ${nombreGasto}.`);
-  
-      const respuesta = prompt("¿Quiere agregar otro gasto? (Ingrese 'si' para sí, cualquier otra tecla para no)");
-  
-      if (respuesta.toLowerCase() !== 'si') {
-        break;
-      }
+      localStorage.setItem("cuentaPersonal", JSON.stringify(cuentaPersonal));
+      mostrarResumen();
     }
+  }
   
+  function eliminarGasto(nombreGasto) {
+    cuentaPersonal.eliminarGasto(nombreGasto);
+    localStorage.setItem("cuentaPersonal", JSON.stringify(cuentaPersonal));
     mostrarResumen();
   }
   
-  // Función para mostrar un resumen de la cuenta
+  function reiniciarSimulador() {
+    cuentaPersonal.reiniciar();
+    localStorage.removeItem("cuentaPersonal");
+    limpiarFormulario();
+    mostrarResumen();
+  }
+  
+  function limpiarFormulario() {
+    document.getElementById("montoInicial").value = "";
+    document.getElementById("nombreGasto").value = "";
+    document.getElementById("cantidadGasto").value = "";
+  }
+  
   function mostrarResumen() {
-    console.log("Resumen de la cuenta:");
-    console.log(`Monto inicial: ${cuentaPersonal.montoInicial}`);
-    console.log("Gastos:");
+    const montoInicialResumen = document.getElementById("montoInicialResumen");
+    const gastosResumen = document.getElementById("gastosResumen");
+    const saldoResumen = document.getElementById("saldoResumen");
+    const mensajeFinal = document.getElementById("mensajeFinal");
   
-    if (cuentaPersonal.gastos.length === 0) {
-      console.log("No se registraron gastos.");
-    } else {
-      cuentaPersonal.gastos.forEach((gasto) => {
-        console.log(`${gasto.nombre}: ${gasto.cantidad}`);
-      });
-    }
+    montoInicialResumen.textContent = `Monto inicial: ${cuentaPersonal.montoInicial}`;
+    gastosResumen.innerHTML = "Gastos:<br>" +
+      (cuentaPersonal.gastos.length === 0 ? "No se registraron gastos." :
+        cuentaPersonal.gastos.map(gasto =>
+          `${gasto.nombre}: ${gasto.cantidad} (${gasto.fecha})
+          <button onclick="eliminarGasto('${gasto.nombre}')">Eliminar</button>`
+        ).join('<br>'));
   
-    console.log(`Saldo restante: ${cuentaPersonal.calcularSaldo()}`);
+    saldoResumen.textContent = `Saldo restante: ${cuentaPersonal.calcularSaldo()}`;
   
     if (cuentaPersonal.calcularSaldo() <= 0) {
-      console.log("¡Se ha agotado el dinero! No puedes agregar más gastos.");
+      mensajeFinal.textContent = "¡Se ha agotado el dinero! No puedes agregar más gastos.";
+    } else {
+      mensajeFinal.textContent = "";
     }
   }
   
-  // Iniciar la simulación
-  establecerMontoInicial();
-  simularCuenta();
+  document.addEventListener("DOMContentLoaded", () => {
+    const storedCuenta = localStorage.getItem("cuentaPersonal");
+  
+    if (storedCuenta) {
+      cuentaPersonal = JSON.parse(storedCuenta);
+      mostrarResumen();
+    }
+  });
   
